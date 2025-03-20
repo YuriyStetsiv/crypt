@@ -1,12 +1,12 @@
 Обрав Argon2i на основі вашої лекії і додакового дослідження.  
 Зазвичай користувався SHA256 але захотілось спробувати щось новіше.  
 
-Параметри: 
-    time_cost=4,
-    memory_cost= 1048576, #1GB
-    hash_len=32,
-    salt_len=16,
-    parallelism= 8
+Параметри:   
+    time_cost=4,  
+    memory_cost= 1048576, #1GB  
+    hash_len=32,  
+    salt_len=16,  
+    parallelism= 8  
 
 parallelism - обраний на основі мого процесора;  
 salt_len - обрано 16 байт як дефолтне значення;  
