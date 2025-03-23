@@ -1,0 +1,26 @@
+[
+    {
+        "username": "test",
+        "salt": "ca346d0fcd75f0456c1ff5d26455835b",
+        "iterations": 1000000,
+        "key": "c8da412b5bc2371f8d214d579cb002e6"
+    },
+    {
+        "username": "ffasd",
+        "salt": "02d48194ce68f6afc24ea68f6f8c1a63",
+        "iterations": 1000000,
+        "key": "ed1130ddf54944b5dd676ccb6089fdf7"
+    },
+    {
+        "username": "test1",
+        "salt": "e5e95c8f97b79ccf6b59fef11874072b",
+        "iterations": 1000000,
+        "key": "55fea04b782a672bfb3c4dc311fc7834"
+    },
+    {
+        "username": "tricky_nicky",
+        "salt": "8b98d97033a4517845f2f61f2dcd8b00",
+        "iterations": 1000000,
+        "key": "4682253897b7e326516298a2fb3e27fe"
+    }
+]
