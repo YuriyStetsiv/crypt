@@ -22,17 +22,17 @@ def main():
     iv_bytes = binascii.unhexlify(IV)
 
     salt = os.urandom(16)
-    session_counter = os.urandom(16)
+    
+    session_counter = os.urandom(16) #fake mock for logic of getting real session_counter
     date_time_flag = datetime.datetime.now()
 
     info = f"MAC_KEY-session-{session_counter.hex()}-{date_time_flag.isoformat()}"
-    info_bytes = binascii.unhexlify(binascii.hexlify(info.encode()))
 
     key_mac = HKDF(
         algorithm=hashes.SHA256(),
         length=32,
         salt=salt,
-        info=info_bytes,
+        info=info.encode(),
         backend=default_backend()
     )
 
