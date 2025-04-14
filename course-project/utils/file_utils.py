@@ -1,19 +1,34 @@
-import json
 import os
-from typing import List
+from cryptography.hazmat.primitives import serialization
 
-from models.identity_key import IdentityKey
+def save_keys(
+          private_path: str, 
+          public_path: str,
+          private_key):
+    with open(private_path, "wb") as f:
+                f.write(
+                    private_key.private_bytes(
+                        encoding=serialization.Encoding.PEM,
+                        format=serialization.PrivateFormat.PKCS8,
+                        encryption_algorithm=serialization.NoEncryption()
+                    )
+                )
 
-def save_db(path: str, identity_keys: List[IdentityKey]):
-    with open(path, 'w') as f:
-        json.dump([key.to_dict() for key in identity_keys], f, indent=4)
+    with open(public_path, "wb") as f:
+        f.write(
+            private_key.public_key().public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            )
+        )
 
-def load_db(path: str) -> List[IdentityKey]:
-    if os.path.exists(path):
-        with open(path, 'r') as f:
-            try:
-                data = json.load(f)
-                return [IdentityKey.from_dict(item) for item in data]
-            except json.JSONDecodeError:
-                return []
-    return []
+def load_keys(private_path: str, public_path: str):
+    if os.path.exists(private_path) and os.path.exists(public_path):
+        with open(private_path, "rb") as f:
+             private_key = serialization.load_pem_private_key(f.read(), password=None)
+
+        with open(public_path, "rb") as f:
+            public_key = serialization.load_pem_public_key(f.read())
+
+
+        return private_key, public_key

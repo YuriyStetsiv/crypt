@@ -47,13 +47,11 @@ async def receive_handshake(reader, identity_public_key: Ed25519PublicKey) -> X2
     received_dh_public_bytes = bytes.fromhex(dh_public_hex)
     signature = bytes.fromhex(signature_hex)
 
-    # Перевіряємо підпис за допомогою identity публічного ключа співрозмовника
     try:
         identity_public_key.verify(signature, received_dh_public_bytes)
     except Exception as e:
         raise ValueError("Перевірка підпису ефемерного ключа не пройшла") from e
     
-    # Якщо підпис валідний, повертаємо публічний ключ
     return X25519PublicKey.from_public_bytes(received_dh_public_bytes)
 
 async def do_handshake(reader, writer, local_dh_public, private_identity_key: Ed25519PrivateKey,  user_id) -> X25519PublicKey:
@@ -66,17 +64,3 @@ async def do_handshake(reader, writer, local_dh_public, private_identity_key: Ed
     remote_dh_public = await receive_handshake(reader, identityKey)
 
     return remote_dh_public
-
-def derive_initial_root(shared_secret: bytes) -> bytes:
-    """
-    Використовує HKDF для виведення початкового root key із спільного DH секрету.
-    """
-    hkdf = HKDF(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=None,
-        info=b"InitialRootKey",
-        backend=default_backend()
-    )
-    
-    return hkdf.derive(shared_secret)

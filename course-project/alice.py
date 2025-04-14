@@ -1,15 +1,13 @@
 import asyncio
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
-from binascii import hexlify
 
 from models.constants import Constants
 
-from models.secure_message import SecureMessage
 from services.identity_service import IdentityService
+from services.key_service import derive_initial_root
 from services.message_service import MessageService
-from engines.ed25519_engine import generate_ed25519_keys
 from engines.x25519_engine import generate_x25519_keys
-from handshake import do_handshake,derive_initial_root
+from handshake import do_handshake
 from double_ratchet import DoubleRatchet
 
 from utils.server_utils import alice_server, prompt, show, read_message_from_stdin
@@ -19,6 +17,7 @@ debug_mode = False
 private_identity_key: Ed25519PrivateKey
 public_idenity_key: Ed25519PublicKey
 
+message_service: MessageService
 
 async def receive(reader):
     """Receive data from other party"""
@@ -29,7 +28,7 @@ async def receive(reader):
             break
 
         try:    
-            message = MessageService.parse_message(data)
+            message = message_service.parse_message(data)
             show(message)
         except Exception as e:
             show(f"[ERROR] Failed to decrypt message: {e}")
@@ -43,7 +42,7 @@ async def send(writer):
         message = await read_message_from_stdin()
 
         # {ENCRYPT HERE}
-        data = MessageService.generate_message(Constants.ALICE, message, private_identity_key)
+        data = message_service.generate_message(message, private_identity_key)
 
         # Send message
         writer.write(data)
@@ -67,8 +66,6 @@ async def init_connection_wrapper(debug=False):
     if debug_mode:
         ("Alice is running in debug mode")
 
-    IdentityService.init_storage()
-
     global private_identity_key, public_idenity_key
     private_identity_key, public_idenity_key = IdentityService.init_keys(Constants.ALICE, debug_mode)
 
@@ -86,8 +83,10 @@ async def init_connection_wrapper(debug=False):
         dr = DoubleRatchet(initial_root, alice_dh_private, alice_dh_public, bob_handshake_public)
         # # Виконуємо початковий ratchet update
         dr.dh_ratchet(bob_handshake_public)
-        #set_double_ratchet_instance(dr)
 
+        global message_service
+        message_service = MessageService(dr, Constants.ALICE)
+        
         if debug_mode:
             show_init_connection_logs(Constants.ALICE, 
                                     alice_dh_private,

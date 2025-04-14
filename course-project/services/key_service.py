@@ -1,10 +1,20 @@
-import os
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 
-def generate_initial_root_key() -> bytes:
-    return os.urandom(32)
+def derive_initial_root(shared_secret: bytes) -> bytes:
+    """
+    Використовує HKDF для виведення початкового root key із спільного DH секрету.
+    """
+    hkdf = HKDF(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=None,
+        info=b"InitialRootKey",
+        backend=default_backend()
+    )
+    
+    return hkdf.derive(shared_secret)
 
 def derive_double_ratchet_keys(current_root_key: bytes, dh_shared_secret: bytes) -> tuple:
     hkdf = HKDF(
