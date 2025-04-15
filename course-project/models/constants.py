@@ -1,8 +1,8 @@
 class Constants:
+    # ALICE  i BOB
+    # використовуються як  user_id
     ALICE = "alice"
     BOB = "bob"
-    
-    IDENTITY_KEY_STORAGE_PATH = "files/identity-key-storage.json"
 
     BOB_PUBLIC_SIGN_KEY = "files/signing_key_ed25519_bob.pub"
     BOB_PRIVATE_SIGN_KEY = "files/signing_key_ed25519_bob"

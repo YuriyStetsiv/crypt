@@ -1,14 +1,9 @@
 import json
-from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PublicKey, X25519PrivateKey
+from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PublicKey
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from cryptography.hazmat.primitives import serialization
 from services.identity_service import IdentityService
-from engines.ed25519_engine import ed25519_sign, ed25519_verify, restore_public_key
-from binascii import hexlify
 import json
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.backends import default_backend
 
 # Функція для відправлення handshake з підписом
 async def send_handshake(writer, local_dh_public: X25519PublicKey, identity_private_key: Ed25519PrivateKey) -> None:

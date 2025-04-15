@@ -7,6 +7,10 @@ from utils.file_utils import save_keys, load_keys
 from utils.logger_utils import show_identity_logs
 from models.constants import Constants
 
+# Імітація Identity за концепцією Signal
+# Оскільки PKI не використовується в Signal
+# То підпис відбувається на основі приватних\публічних ключів
+# Які знаходять у фейковому стореджі
 class IdentityService:
     def init_keys(user_id: str, debug_mode: bool):
         private_path, public_path = _get_paths(user_id)
