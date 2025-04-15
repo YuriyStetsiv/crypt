@@ -6,11 +6,6 @@ from utils.logger_utils import show_message_logs
 
 class MessageService:
     def __init__(self, dr_instance: DoubleRatchet, user_id: str, debug_mode: bool):
-        """
-        Конструктор, який встановлює Double Ratchet instance.
-        Параметр dr_instance – це об'єкт DoubleRatchet, який використовується для
-        шифрування/дешифрування повідомлень.
-        """
         self.dr_instance = dr_instance
         self.user_id = user_id
         self.debug_mode = debug_mode

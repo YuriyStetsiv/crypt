@@ -1,5 +1,7 @@
 import asyncio
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PublicKey
+import sys 
 
 from models.constants import Constants
 
@@ -35,12 +37,17 @@ async def receive(reader):
 
         prompt()
 
-
 async def send(writer):
     """Send data to other party"""
     while True:
         message = await read_message_from_stdin()
 
+        if message.strip().lower() == "q":
+            print("Exit")
+            writer.close()
+            await writer.wait_closed()
+            sys.exit(0)      
+            
         # {ENCRYPT HERE}
         data = message_service.generate_message(message, private_identity_key)
 
@@ -49,7 +56,6 @@ async def send(writer):
 
         prompt()
         await writer.drain()
-
 
 async def init_connection():
     reader, writer = await bob_client()
@@ -69,6 +75,7 @@ async def init_connection():
     shared_secret = bob_handshake_private.exchange(alice_handshake_public)
     initial_root = derive_initial_root(shared_secret)
 
+
     if debug_mode:
         show_init_connection_logs(Constants.BOB, 
                                   bob_dh_private,
@@ -77,10 +84,21 @@ async def init_connection():
                                   bob_handshake_public, 
                                   alice_handshake_public,
                                   shared_secret,
-                                  initial_root)    
+                                  initial_root) 
 
-    dr = DoubleRatchet(initial_root, bob_dh_private, bob_dh_public, alice_handshake_public, debug_mode)
-    dr.dh_ratchet(alice_handshake_public)
+
+    # alice_dh_ratchet_public_bytes = await reader.readexactly(32)
+    # alice_dh_ratchet_public = X25519PublicKey.from_public_bytes(alice_dh_ratchet_public_bytes)
+
+    # Тепер Bob використовує handshake-пару як свою початкову пару для Double Ratchet:
+    # dr = DoubleRatchet(initial_root, bob_handshake_private, bob_handshake_public, alice_dh_ratch et_public, debug_mode)
+    # dr.dh_ratchet(alice_dh_ratchet_public, is_initiator=False)
+    # dr.remote_dh_public = alice_dh_ratchet_public
+    # dr.recv_msg_number = 0
+    
+    dr = DoubleRatchet(initial_root, bob_handshake_private, bob_handshake_public, alice_handshake_public, debug_mode)
+    dr.dh_ratchet(alice_handshake_public, False)
+    #dr.remote_dh_public = alice_handshake_public
    
     global message_service
     message_service = MessageService(dr, Constants.BOB, debug_mode)
@@ -95,7 +113,6 @@ async def init_connection_wrapper(debug=False):
         print("Bob is running in debug mode")
 
     await init_connection()
-
 
 if __name__ == "__main__":
     print("Starting Bob's chat...")

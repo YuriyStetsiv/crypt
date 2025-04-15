@@ -48,7 +48,9 @@ def show_init_connection_logs(user_id,
     logging.info(f'[Client] {user_id} handshake_public_key: {hexlify(handshake_public_bytes)}')
     logging.info(f'[Client] reciev_handshake_public_bytes: {hexlify(reciev_handshake_public_bytes)}') 
     logging.info(f'[Client] shared_secret: {hexlify(shared_secret)}')
-    logging.info(f'[Client] double_ratchet_initial_root: {hexlify(initial_root)}')  
+    logging.info(f'[Client] double_ratchet_initial_root: {hexlify(initial_root)}')
+
+    print('\n')
 
 def show_ratchet_logs(root_key: bytes,
                       dh_private: X25519PrivateKey,
@@ -57,7 +59,9 @@ def show_ratchet_logs(root_key: bytes,
                       send_chain: bytes | None,
                       recv_chain: bytes | None,
                       send_msg_number,
-                      recv_msg_number):
+                      recv_msg_number, 
+                      message_key: bytes | None = None,
+                      operation: str | None = None):
     
     dh_private_bytes = dh_private.private_bytes(
         encoding=serialization.Encoding.Raw,
@@ -85,8 +89,12 @@ def show_ratchet_logs(root_key: bytes,
         recv_chain_info = 'None'
     else:
         recv_chain_info = hexlify(recv_chain).decode()
+    
+    if operation is None:
+        logging.info(f'[Ratchet] configurations:')
+    else:
+        logging.info(f'[Ratchet] {operation} configurations:')
 
-    logging.info(f'[Ratchet] configurations:')
     logging.info(f'[Ratchet] root_key: {hexlify(root_key)}')
     logging.info(f'[Ratchet] dh_private: {hexlify(dh_private_bytes)}')
     logging.info(f'[Ratchet] dh_public: {hexlify(dh_public_bytes)}')
@@ -95,6 +103,11 @@ def show_ratchet_logs(root_key: bytes,
     logging.info(f'[Ratchet] recv_chain: {recv_chain_info}')
     logging.info(f'[Ratchet] send_msg_number: {send_msg_number}')
     logging.info(f'[Ratchet] recv_msg_number: {recv_msg_number}')
+
+    if message_key is not None:
+        logging.info(f'[Ratchet] key_message: {hexlify(message_key)}')
+
+    print('\n')
 
 def show_identity_logs(user_id: str, private_key,  public_key):
     private_bytes = private_key.private_bytes(
