@@ -180,12 +180,11 @@ class DoubleRatchet:
 
         message_key = self.advance_recv_chain()
 
-        print(f'message_key: {hexlify(message_key)}')
-
         nonce = bytes.fromhex(header['nonce'])
         ciphertext = bytes.fromhex(ciphertext_hex)
 
         engine = CipherEngine(key=message_key)
+        show_debug_logs(self, message_key, 'decrypt')
 
         return engine.decrypt(nonce, ciphertext)
 
