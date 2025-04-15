@@ -79,14 +79,6 @@ async def init_connection_wrapper(debug=False):
         shared_secret = alice_handshake_private.exchange(bob_handshake_public)      
         initial_root = derive_initial_root(shared_secret)
 
-        # Припустимо, що публічний ключ Bob для Double Ratchet узгоджується через handshake – в цій демонстрації використовуємо bob_handshake_public.
-        dr = DoubleRatchet(initial_root, alice_dh_private, alice_dh_public, bob_handshake_public)
-        # # Виконуємо початковий ratchet update
-        dr.dh_ratchet(bob_handshake_public)
-
-        global message_service
-        message_service = MessageService(dr, Constants.ALICE)
-        
         if debug_mode:
             show_init_connection_logs(Constants.ALICE, 
                                     alice_dh_private,
@@ -95,8 +87,17 @@ async def init_connection_wrapper(debug=False):
                                     alice_handshake_public, 
                                     bob_handshake_public,
                                     shared_secret,
-                                    initial_root)        
-        
+                                    initial_root)
+            
+        # Припустимо, що публічний ключ Bob для Double Ratchet узгоджується через handshake – в цій демонстрації використовуємо bob_handshake_public.
+        dr = DoubleRatchet(initial_root, alice_dh_private, alice_dh_public, bob_handshake_public, debug_mode)
+        # # Виконуємо початковий ratchet update
+        dr.dh_ratchet(bob_handshake_public)
+
+      
+        global message_service
+        message_service = MessageService(dr, Constants.ALICE, debug_mode)
+ 
         await init_connection(reader, writer)
     
     await alice_server(wrapped_init)    

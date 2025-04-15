@@ -54,7 +54,10 @@ async def receive_handshake(reader, identity_public_key: Ed25519PublicKey) -> X2
     
     return X25519PublicKey.from_public_bytes(received_dh_public_bytes)
 
-async def do_handshake(reader, writer, local_dh_public, private_identity_key: Ed25519PrivateKey,  user_id) -> X25519PublicKey:
+async def do_handshake(reader, writer, 
+                       local_dh_public, 
+                       private_identity_key: Ed25519PrivateKey,  
+                       user_id:str) -> X25519PublicKey:
     """
     Виконує повноцінний handshake: відправляє свій публічний ключ і чекає на публічний ключ співрозмовника.
     """

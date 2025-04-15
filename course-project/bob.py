@@ -69,12 +69,6 @@ async def init_connection():
     shared_secret = bob_handshake_private.exchange(alice_handshake_public)
     initial_root = derive_initial_root(shared_secret)
 
-    dr = DoubleRatchet(initial_root, bob_dh_private, bob_dh_public, alice_handshake_public)
-    dr.dh_ratchet(alice_handshake_public)
-   
-    global message_service
-    message_service = MessageService(dr, Constants.ALICE)
-    
     if debug_mode:
         show_init_connection_logs(Constants.BOB, 
                                   bob_dh_private,
@@ -83,7 +77,13 @@ async def init_connection():
                                   bob_handshake_public, 
                                   alice_handshake_public,
                                   shared_secret,
-                                  initial_root)
+                                  initial_root)    
+
+    dr = DoubleRatchet(initial_root, bob_dh_private, bob_dh_public, alice_handshake_public, debug_mode)
+    dr.dh_ratchet(alice_handshake_public)
+   
+    global message_service
+    message_service = MessageService(dr, Constants.BOB, debug_mode)
     
     await asyncio.gather(receive(reader), send(writer))
 

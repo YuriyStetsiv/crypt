@@ -1,10 +1,10 @@
-import logging
 import os
-from binascii import hexlify
+import logging
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
 from utils.file_utils import save_keys, load_keys
+from utils.logger_utils import show_identity_logs
 from models.constants import Constants
 
 class IdentityService:
@@ -12,14 +12,13 @@ class IdentityService:
         private_path, public_path = _get_paths(user_id)
         private_key, public_key = load_keys(private_path, public_path)
 
-        # Інакше – генеруємо нові ключі
-        if private_key is None or public_key is None:
-            private_key = Ed25519PrivateKey.generate()
-            public_key = private_key.public_key()
-            save_keys(private_path, public_path, private_key)
+        # if private_key is None or public_key is None:
+        #     private_key = Ed25519PrivateKey.generate()
+        #     public_key = private_key.public_key()
+        #     save_keys(private_path, public_path, private_key)
   
         if debug_mode:
-            _show_init_keys_debug_info(user_id, private_key, public_key)
+            show_identity_logs(user_id, private_key, public_key)
 
         return private_key, public_key
 
@@ -36,10 +35,27 @@ class IdentityService:
                 public_key = serialization.load_pem_public_key(f.read())
 
             return public_key
+        else:
+             raise ValueError(f"public_sign_key {user_id} for not found")
+        
+    @staticmethod
+    def verify(
+            user_id: str, 
+            signature, 
+            data,
+            debug_mode: bool) -> bool:
+        public_key = IdentityService.get_public_key(user_id, debug_mode)
 
-    
-    def get_private_key(path: str, debug_mode: bool):
-        print('work')
+        try:
+            public_key.verify(signature, data)
+            logging.info(f'[Identity] message from {user_id} valid')
+
+            return True
+        except Exception:
+            logging.info(f'[Identity] message from {user_id}  not valid')
+
+            return False
+
 
 
 @staticmethod
@@ -54,20 +70,3 @@ def _get_paths(user_id: str):
         public_path = Constants.BOB_PUBLIC_SIGN_KEY 
 
     return  private_path ,public_path 
-
-@staticmethod
-def _show_init_keys_debug_info(user_id: str, private_key,  public_key):
-    private_bytes = private_key.private_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PrivateFormat.Raw,
-        encryption_algorithm=serialization.NoEncryption()
-    )
-
-    public_bytes = public_key.public_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PublicFormat.Raw
-    )
-
-    logging.info(f'[Identity] {user_id} ed25519 init_keys:')
-    logging.info(f'[Identity] {user_id} ed25519 private_key: {hexlify(private_bytes)}')
-    logging.info(f'[Identity] {user_id} ed25519 public_key: {hexlify(public_bytes)}')

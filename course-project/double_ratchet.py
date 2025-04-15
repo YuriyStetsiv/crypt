@@ -1,15 +1,16 @@
-import os
-
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
+from binascii import hexlify
 
 from services.key_service import kdf_chain, derive_double_ratchet_keys
 from engines.chipher_engine import CipherEngine
+from utils.logger_utils import show_ratchet_logs
+
 
 class DoubleRatchet:
     def __init__(self, root_key: bytes, dh_private: X25519PrivateKey,
-                 dh_public: X25519PublicKey, remote_dh_public: X25519PublicKey):
+                 dh_public: X25519PublicKey, remote_dh_public: X25519PublicKey,
+                 debug_mode: bool):
         self.root_key = root_key
         self.dh_private = dh_private
         self.dh_public = dh_public
@@ -18,6 +19,7 @@ class DoubleRatchet:
         self.recv_chain = None
         self.send_msg_number = 0
         self.recv_msg_number = 0
+        self.debug_mode = debug_mode
 
     def dh_ratchet(self, new_remote_dh_public: X25519PublicKey):
         shared_secret = self.dh_private.exchange(new_remote_dh_public)
@@ -33,6 +35,16 @@ class DoubleRatchet:
         self.remote_dh_public = new_remote_dh_public
         self.send_msg_number = 0
         self.recv_msg_number = 0
+
+        if self.debug_mode:
+            show_ratchet_logs(self.root_key, 
+                              self.dh_private, 
+                              self.dh_public,
+                              self.remote_dh_public,
+                              self.send_chain,
+                              self.recv_chain,
+                              self.send_msg_number,
+                              self.recv_msg_number)
 
     def advance_send_chain(self) -> bytes:
         self.send_chain, message_key = kdf_chain(self.send_chain)
@@ -54,8 +66,15 @@ class DoubleRatchet:
                 encoding=serialization.Encoding.Raw,
                 format=serialization.PublicFormat.Raw
             ).hex()
+        else: 
+            header['dh'] = self.dh_public.public_bytes(
+                encoding=serialization.Encoding.Raw,
+                format=serialization.PublicFormat.Raw
+            ).hex()
 
         message_key = self.advance_send_chain()
+
+        print(f'message_key: {hexlify(message_key)}')
 
         engine = CipherEngine(key=message_key)
         nonce, ciphertext = engine.encrypt(plaintext)
@@ -78,6 +97,8 @@ class DoubleRatchet:
                 self.dh_ratchet(new_remote_dh_public)
 
         message_key = self.advance_recv_chain()
+        print(f'message_key: {hexlify(message_key)}')
+
         nonce = bytes.fromhex(header['nonce'])
         ciphertext = bytes.fromhex(ciphertext_hex)
 
