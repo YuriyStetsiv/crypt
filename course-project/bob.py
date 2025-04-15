@@ -87,18 +87,8 @@ async def init_connection():
                                   initial_root) 
 
 
-    # alice_dh_ratchet_public_bytes = await reader.readexactly(32)
-    # alice_dh_ratchet_public = X25519PublicKey.from_public_bytes(alice_dh_ratchet_public_bytes)
-
-    # Тепер Bob використовує handshake-пару як свою початкову пару для Double Ratchet:
-    # dr = DoubleRatchet(initial_root, bob_handshake_private, bob_handshake_public, alice_dh_ratch et_public, debug_mode)
-    # dr.dh_ratchet(alice_dh_ratchet_public, is_initiator=False)
-    # dr.remote_dh_public = alice_dh_ratchet_public
-    # dr.recv_msg_number = 0
-    
     dr = DoubleRatchet(initial_root, bob_handshake_private, bob_handshake_public, alice_handshake_public, debug_mode)
     dr.dh_ratchet(alice_handshake_public, False)
-    #dr.remote_dh_public = alice_handshake_public
    
     global message_service
     message_service = MessageService(dr, Constants.BOB, debug_mode)

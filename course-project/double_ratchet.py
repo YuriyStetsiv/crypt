@@ -44,40 +44,6 @@ class DoubleRatchet:
         self.recv_msg_number = 0
 
         show_debug_logs(self)
-        # if self.debug_mode:
-        #     show_ratchet_logs(self.root_key, 
-        #                     self.dh_private, 
-        #                     self.dh_public,
-        #                     self.remote_dh_public,
-        #                     self.send_chain,
-        #                     self.recv_chain,
-        #                     self.send_msg_number,
-        #                     self.recv_msg_number)
-
-    # def dh_ratchet(self, new_remote_dh_public: X25519PublicKey):
-    #     shared_secret = self.dh_private.exchange(new_remote_dh_public)
-    #     new_root, new_send_chain, new_recv_chain = derive_double_ratchet_keys(self.root_key, shared_secret)
-
-    #     self.root_key = new_root
-    #     self.send_chain = new_send_chain
-    #     self.recv_chain = new_recv_chain
-
-    #     # Генеруємо нову DH пару для наступних ratchet-оновлень
-    #     self.dh_private = X25519PrivateKey.generate()
-    #     self.dh_public = self.dh_private.public_key()
-    #     self.remote_dh_public = new_remote_dh_public
-    #     self.send_msg_number = 0
-    #     self.recv_msg_number = 0
-
-    #     if self.debug_mode:
-    #         show_ratchet_logs(self.root_key, 
-    #                           self.dh_private, 
-    #                           self.dh_public,
-    #                           self.remote_dh_public,
-    #                           self.send_chain,
-    #                           self.recv_chain,
-    #                           self.send_msg_number,
-    #                           self.recv_msg_number)
 
     def advance_send_chain(self) -> bytes:
         self.send_chain, message_key = kdf_chain(self.send_chain)
@@ -91,37 +57,11 @@ class DoubleRatchet:
 
         return message_key
 
-    # def encrypt(self, plaintext: bytes) -> dict:
-    #     header = {}
-
-    #     if self.send_msg_number == 0:
-    #         header['dh'] = self.dh_public.public_bytes(
-    #             encoding=serialization.Encoding.Raw,
-    #             format=serialization.PublicFormat.Raw
-    #         ).hex()
-    #     else: 
-    #         header['dh'] = self.dh_public.public_bytes(
-    #             encoding=serialization.Encoding.Raw,
-    #             format=serialization.PublicFormat.Raw
-    #         ).hex()
-
-    #     message_key = self.advance_send_chain()
-
-    #     print(f'message_key: {hexlify(message_key)}')
-
-    #     engine = CipherEngine(key=message_key)
-    #     nonce, ciphertext = engine.encrypt(plaintext)
-
-    #     header['nonce'] = nonce.hex()
-    #     header['msg_num'] = self.send_msg_number
-
-    #     return {'header': header, 'ciphertext': ciphertext.hex()}
 
     def encrypt(self, plaintext: bytes) -> dict:
         header = {}
 
         # Новий DH надсилаємо ТІЛЬКИ коли send_msg_number == 0
-        #if self.send_msg_number == 0 and self.remote_dh_public is None:
         header['dh'] = self.dh_public.public_bytes(
             encoding=serialization.Encoding.Raw,
             format=serialization.PublicFormat.Raw
@@ -139,40 +79,18 @@ class DoubleRatchet:
 
         return {'header': header, 'ciphertext': ciphertext.hex()}
 
-
-    # def decrypt(self, header: dict, ciphertext_hex: str) -> bytes:
-    #     if 'dh' in header:
-    #         remote_dh_bytes = bytes.fromhex(header['dh'])
-    #         new_remote_dh_public = X25519PublicKey.from_public_bytes(remote_dh_bytes)
-            
-    #         # Якщо отримано новий DH ключ – виконуємо ratchet update           
-    #         if (self.remote_dh_public is None or 
-    #             self.remote_dh_public.public_bytes(
-    #                 encoding=serialization.Encoding.Raw,
-    #                 format=serialization.PublicFormat.Raw) != remote_dh_bytes):
-    #             self.dh_ratchet(new_remote_dh_public, False)
-
-    #     message_key = self.advance_recv_chain()
-    #     print(f'message_key: {hexlify(message_key)}')
-
-    #     nonce = bytes.fromhex(header['nonce'])
-    #     ciphertext = bytes.fromhex(ciphertext_hex)
-
-    #     engine = CipherEngine(key=message_key)
-    #     show_debug_logs(self, message_key, 'decrypt')
-
-    #     return engine.decrypt(nonce, ciphertext)
-
     def decrypt(self, header: dict, ciphertext_hex: str) -> bytes:
         remote_dh_bytes = bytes.fromhex(header['dh']) if 'dh' in header else None
-
-        new_dh_received = (
-            remote_dh_bytes is not None and 
-            (self.remote_dh_public is None or 
-            self.remote_dh_public.public_bytes(
-                encoding=serialization.Encoding.Raw,
-                format=serialization.PublicFormat.Raw) != remote_dh_bytes)
-        )
+      
+        # new_dh_received = (
+        #     remote_dh_bytes is not None and 
+        #     (self.remote_dh_public is None or 
+        #     self.remote_dh_public.public_bytes(
+        #         encoding=serialization.Encoding.Raw,
+        #         format=serialization.PublicFormat.Raw) != remote_dh_bytes)
+        # )
+        
+        # print(f'new_dh_received: {new_dh_received}')
 
         # if new_dh_received:
         #     new_remote_dh_public = X25519PublicKey.from_public_bytes(remote_dh_bytes)
@@ -187,43 +105,6 @@ class DoubleRatchet:
         show_debug_logs(self, message_key, 'decrypt')
 
         return engine.decrypt(nonce, ciphertext)
-
-    # def decrypt(self, header: dict, ciphertext_hex: str) -> bytes:
-    #     remote_dh_bytes = bytes.fromhex(header['dh']) if 'dh' in header else None
-    #     new_dh_received = False
-
-    #     # if remote_dh_bytes is not None:
-    #     #     if self.remote_dh_public is None:
-    #     #         new_dh_received = True
-    #     #         print(f'[decrypt] no current remote_dh_public, treating as new')
-    #     #     else:
-    #     #         current_bytes = self.remote_dh_public.public_bytes(
-    #     #             encoding=serialization.Encoding.Raw,
-    #     #             format=serialization.PublicFormat.Raw
-    #     #         )
-    #     #         print(f'[decrypt] expected: {hexlify(current_bytes)}')
-    #     #         print(f'[decrypt] received: {hexlify(remote_dh_bytes)}')
-    #     #         new_dh_received = current_bytes != remote_dh_bytes
-
-    #     # if new_dh_received:
-    #     #     new_remote_dh_public = X25519PublicKey.from_public_bytes(remote_dh_bytes)
-    #     #     self.dh_ratchet(new_remote_dh_public, is_initiator=False)
-    #     #     self.remote_dh_public = new_remote_dh_public
-    #     new_remote_dh_public = X25519PublicKey.from_public_bytes(remote_dh_bytes)
-    #     self.dh_ratchet(new_remote_dh_public, is_initiator=False)
-    #     self.remote_dh_public = new_remote_dh_public
-
-    #     message_key = self.advance_recv_chain()
-
-    #     nonce = bytes.fromhex(header['nonce'])
-    #     ciphertext = bytes.fromhex(ciphertext_hex)
-
-    #     engine = CipherEngine(key=message_key)
-
-    #     show_debug_logs(self, message_key, 'decrypt')
-
-    #     return engine.decrypt(nonce, ciphertext)
-
 
 @staticmethod
 def show_debug_logs(self, message_key: bytes | None = None, operation: str | None = None):

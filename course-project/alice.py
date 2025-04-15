@@ -98,23 +98,11 @@ async def init_connection_wrapper(debug=False):
         # Припустимо, що публічний ключ Bob для Double Ratchet узгоджується через handshake – в цій демонстрації використовуємо bob_handshake_public.
         #dr = DoubleRatchet(initial_root, alice_dh_private, alice_dh_public, bob_handshake_public, debug_mode)
         dr = DoubleRatchet(initial_root, alice_handshake_private, alice_handshake_public, bob_handshake_public, debug_mode)
-
         # # Виконуємо початковий ratchet update
         dr.dh_ratchet(bob_handshake_public, True)
-        #dr.send_msg_number = 0
 
         global message_service
         message_service = MessageService(dr, Constants.ALICE, debug_mode)
-
-        # first_message = alice_dh_public.public_bytes(
-        #     serialization.Encoding.Raw,
-        #     serialization.PublicFormat.Raw
-        # )
-
-        # # Надсилаємо перше повідомлення:
-        # print(f'fir: {first_message}')
-        # writer.write(first_message)
-        # await writer.drain()
  
         await init_connection(reader, writer)
     
