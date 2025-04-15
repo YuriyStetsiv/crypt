@@ -51,12 +51,15 @@ class IdentityService:
         public_key = IdentityService.get_public_key(user_id, debug_mode)
 
         try:
-            public_key.verify(signature, data)
-            logging.info(f'[Identity] message from {user_id} valid')
+            public_key.verify(signature, data) 
+            if debug_mode:
+                logging.info(f'[Identity] message from {user_id} valid')
 
             return True
         except Exception:
             logging.info(f'[Identity] message from {user_id}  not valid')
+            if debug_mode:
+                logging.info(f'[Identity] message from {user_id} valid')            
 
             return False
 
