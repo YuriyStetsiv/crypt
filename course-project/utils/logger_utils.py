@@ -75,7 +75,7 @@ def show_ratchet_logs(root_key: bytes,
 
     if shared_secret is not None:
         logging.info(f'[Ratchet] shared_secret: {hexlify(shared_secret)}')
-        
+
     if message_key is not None:
         logging.info(f'[Ratchet] key_message: {hexlify(message_key)}')
 
@@ -99,6 +99,9 @@ def show_message_logs(secure_message: SecureMessage, action: str):
     logging.info(f'[Message] ciphertext: {hexlify(secure_message.ciphertext)}')
     logging.info(f'[Message] msg_num: {secure_message.msg_num}')
     logging.info(f'[Message] signature: {hexlify(secure_message.signature)}')
+    logging.info(f'[Message] conversation_id: {hexlify(secure_message.conversation_id)}')
+    logging.info(f'[Message] message_type: {secure_message.message_type}')
+    logging.info(f'[Message] protocol_version: {secure_message.protocol_version}')
 
     print('')
 

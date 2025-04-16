@@ -13,7 +13,7 @@ class MessageService:
     def generate_message(self, message: str, private_identity_key: Ed25519PrivateKey) -> bytes:
         secure_msg = self.dr_instance.encrypt(message.encode())
         secure_msg.identity_id = self.identity_id
-        secure_msg.signature = private_identity_key.sign(secure_msg.dh_public)
+        secure_msg.signature = private_identity_key.sign(secure_msg.get_signed_data())
 
         if self.debug_mode:
             show_message_logs(secure_msg, 'send')
@@ -28,7 +28,7 @@ class MessageService:
 
         is_verify = IdentityService.verify(secure_msg.identity_id, 
                                            secure_msg.signature, 
-                                           secure_msg.dh_public,
+                                           secure_msg.get_signed_data(),
                                            self.debug_mode)
         if is_verify:
             return self.dr_instance.decrypt(secure_msg).decode()

@@ -48,25 +48,28 @@ class DoubleRatchet:
     #  Відбувається на основі спільного секрету
     #  оскільки не виходить синхронізувати ретчет після першого повідомлення
     def encrypt(self, plaintext: bytes) -> SecureMessage:
+        secure_message = SecureMessage()
+
         engine = CipherEngine(key=self.root_key)
-        nonce, ciphertext = engine.encrypt(plaintext)
+        nonce, ciphertext = engine.encrypt(plaintext, secure_message.get_aad())
+
+        secure_message.nonce = nonce
+        secure_message.ciphertext = ciphertext
+        secure_message.dh_public = get_x25519_public_key_bytes(self.dh_public)
 
         if self.debug_mode:
             show_debug_logs(self, message_key=self.root_key, operation='encrypt')
-
-        return SecureMessage(         
-            dh_public=get_x25519_public_key_bytes(self.dh_public),         
-            nonce=nonce,
-            ciphertext=ciphertext,
-            msg_num=0
-        )
+  
+        return secure_message
     
     def decrypt(self, secure_message: SecureMessage) -> bytes:
         return self._decrypt_with(self.root_key, secure_message)  
 
     def _decrypt_with(self, message_key: bytes, secure_message: SecureMessage) -> bytes:
         engine = CipherEngine(key=message_key)      
-        plaintext = engine.decrypt(secure_message.nonce, secure_message.ciphertext)
+        plaintext = engine.decrypt(secure_message.nonce, 
+                                   secure_message.ciphertext,
+                                   secure_message.get_aad())
 
         if self.debug_mode:
             show_debug_logs(self, message_key=message_key, operation='decrypt')
