@@ -1,58 +1,62 @@
-import json
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PublicKey
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
-from cryptography.hazmat.primitives import serialization
+
 from services.identity_service import IdentityService
-import json
+from models.handshake_message import HandshakeMessage
+from engines.x25519_engine import get_x25519_public_key_bytes
+from utils.logger_utils import show_handshake_log
 
-# Функція для відправлення handshake з підписом
-async def send_handshake(writer, handshake_pulic_key: X25519PublicKey, identity_private_key: Ed25519PrivateKey) -> None:
-    handshake_pulic_key_bytes = handshake_pulic_key.public_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PublicFormat.Raw
-    )
+async def send_handshake_message(writer,
+                         identity_id: str, 
+                         handshake_pulic_key: X25519PublicKey,
+                         dh_public_key: X25519PublicKey,
+                         identity_private_key: Ed25519PrivateKey,
+                         debug_mode: bool) -> None:
+    
+    handshake_pulic_key_bytes = get_x25519_public_key_bytes(handshake_pulic_key)
+    dh_public_key_bytes = get_x25519_public_key_bytes(dh_public_key)
+    siganture_data = handshake_pulic_key_bytes + dh_public_key_bytes + identity_id.encode('utf-8')
+    signature = identity_private_key.sign(siganture_data)
 
-    # Підписуємо ефемерний ключ
-    signature = identity_private_key.sign(handshake_pulic_key_bytes)
+    handshake_msg = HandshakeMessage(identity_id, 
+                                     handshake_pulic_key_bytes, 
+                                     dh_public_key_bytes, 
+                                     signature)
 
-    handshake_msg = {
-        "type": "handshake",
-        "handshake_pulic": handshake_pulic_key_bytes.hex(),
-        "signature": signature.hex()
-    }
-    writer.write((json.dumps(handshake_msg) + "\n").encode())
+    if debug_mode:
+        show_handshake_log(handshake_msg, 'send')
+
+    writer.write(handshake_msg.serialize() + b"\n")
 
     await writer.drain()
 
-async def receive_handshake(reader, identity_public_key: Ed25519PublicKey) -> X25519PublicKey:
+async def receive_handshake_message(reader, debug_mode: bool) -> HandshakeMessage:
     line = await reader.readline()
-    handshake_msg = json.loads(line.decode())
-    if handshake_msg.get("type") != "handshake":
-        raise ValueError("Очікувалось handshake-повідомлення")
-    
-    handshake_pulic_hex = handshake_msg["handshake_pulic"]
-    signature_hex = handshake_msg.get("signature")
-    if not signature_hex:
-        raise ValueError("Підпис ефемерного ключа відсутній")
-    
-    received_handshake_pulic_bytes = bytes.fromhex(handshake_pulic_hex)
-    signature = bytes.fromhex(signature_hex)
+    msg = HandshakeMessage.deserialize(line)
 
-    try:
-        identity_public_key.verify(signature, received_handshake_pulic_bytes)
-    except Exception as e:
-        raise ValueError("Перевірка підпису ефемерного ключа не пройшла") from e
-    
-    return X25519PublicKey.from_public_bytes(received_handshake_pulic_bytes)
+    if debug_mode:
+        show_handshake_log(msg, 'receive')
+
+    siganture_data = msg.handshake_public + msg.dh_public + msg.identity_id.encode('utf-8')
+    is_verify = IdentityService.verify(msg.identity_id, msg.signature, siganture_data, debug_mode)
+
+    if is_verify:
+        return msg
+    else:
+        raise ValueError(f"Invalid handshake signature from {msg.identity_id}")
 
 async def do_handshake(reader, writer, 
-                       handshake_pulic, 
-                       private_identity_key: Ed25519PrivateKey,  
-                       user_id:str) -> X25519PublicKey:
+                       identity_id: str,
+                       handshake_pulic_key: X25519PublicKey,
+                       dh_public_key: X25519PublicKey, 
+                       private_identity_key: Ed25519PrivateKey,
+                       debug_mode: bool) -> HandshakeMessage:
 
-    await send_handshake(writer, handshake_pulic, private_identity_key)
+    await send_handshake_message(writer,
+                                 identity_id, 
+                                 handshake_pulic_key,
+                                 dh_public_key, 
+                                 private_identity_key,
+                                 debug_mode)
     
-    identityKey = IdentityService.get_public_key(user_id, False)
-    remote_dh_public = await receive_handshake(reader, identityKey)
-
-    return remote_dh_public
+    return await receive_handshake_message(reader, debug_mode)

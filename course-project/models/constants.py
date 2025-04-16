@@ -1,6 +1,6 @@
 class Constants:
     # ALICE  i BOB
-    # використовуються як  user_id
+    # використовуються як  identity_id
     ALICE = "alice"
     BOB = "bob"
 

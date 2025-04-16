@@ -3,17 +3,14 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey,
 import sys 
 
 from models.constants import Constants
-
 from services.identity_service import IdentityService
 from services.key_service import derive_initial_root
 from services.message_service import MessageService
-from engines.x25519_engine import generate_x25519_keys
+from engines.x25519_engine import generate_x25519_keys, restore_x25519_public_key
 from handshake import do_handshake
 from double_ratchet import DoubleRatchet
-
 from utils.server_utils import alice_server, prompt, show, read_message_from_stdin
 from utils.logger_utils import show_init_connection_logs
-from cryptography.hazmat.primitives import serialization
 
 debug_mode = False
 private_identity_key: Ed25519PrivateKey
@@ -72,40 +69,51 @@ async def init_connection_wrapper(debug=False):
     if debug_mode:
         ("Alice is running in debug mode")
 
+    # імітація signal identity з привязкою до 
+    # Constants.ALICE\Constants.BOB
     global private_identity_key, public_idenity_key
     private_identity_key, public_idenity_key = IdentityService.init_keys(Constants.ALICE, debug_mode)
 
-    # Генеруємо DH пару для Double Ratchet (або можна використати handshake DH пару)
+    # Генеруємо DH\Handshake пари ключів
     alice_dh_private, alice_dh_public = generate_x25519_keys()
     alice_handshake_private, alice_handshake_public = generate_x25519_keys()
 
     async def wrapped_init(reader, writer):
-        # Виконуємо handshake: відправляємо свій ключ і отримуємо ключ Bob
-        bob_handshake_public = await do_handshake(reader, writer, alice_handshake_public, private_identity_key, Constants.BOB)
-        shared_secret = alice_handshake_private.exchange(bob_handshake_public)      
+        # Виконуємо handshake: 
+        # відправляємо dh_public_key\handshake_public 
+        # отримуємо remote_dh_public_key\remote_handshake_public
+        handshake_message = await do_handshake(reader, writer, Constants.ALICE,
+                                               alice_handshake_public, alice_dh_public, private_identity_key,
+                                               debug_mode)
+        
+        # створення initial_root на основі shared_secret
+        shared_secret = alice_handshake_private.exchange(restore_x25519_public_key(handshake_message.handshake_public))      
         initial_root = derive_initial_root(shared_secret)
 
-        if debug_mode:
-            show_init_connection_logs(Constants.ALICE, 
-                                    alice_dh_private,
-                                    alice_dh_public,
-                                    alice_handshake_private, 
-                                    alice_handshake_public, 
-                                    bob_handshake_public,
-                                    shared_secret,
-                                    initial_root)
-            
-        # Припустимо, що публічний ключ Bob для Double Ratchet узгоджується через handshake – в цій демонстрації використовуємо bob_handshake_public.
-        #dr = DoubleRatchet(initial_root, alice_dh_private, alice_dh_public, bob_handshake_public, debug_mode)
-        dr = DoubleRatchet(initial_root, alice_handshake_private, alice_handshake_public, bob_handshake_public, debug_mode)
+        # ініціалізація DoubleRatchet   
+        dr = DoubleRatchet(initial_root, 
+                           alice_dh_private, 
+                           alice_dh_public, 
+                           restore_x25519_public_key(handshake_message.dh_public), 
+                           debug_mode)
         # # Виконуємо початковий ratchet update
-        dr.dh_ratchet(bob_handshake_public, True)
+        #dr._dh_ratchet(restore_x25519_public_key(handshake_message.dh_public), True)
 
         global message_service
         message_service = MessageService(dr, Constants.ALICE, debug_mode)
- 
+
         await init_connection(reader, writer)
-    
+
+        if debug_mode:
+            show_init_connection_logs(Constants.ALICE, 
+                                      alice_dh_private,
+                                      alice_dh_public,
+                                      alice_handshake_private, 
+                                      alice_handshake_public, 
+                                      handshake_message.dh_public,
+                                      shared_secret,
+                                      initial_root)  
+                 
     await alice_server(wrapped_init)    
 
 if __name__ == "__main__":
