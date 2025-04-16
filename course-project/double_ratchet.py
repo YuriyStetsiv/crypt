@@ -1,5 +1,5 @@
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PublicKey, X25519PrivateKey
-
+from binascii import hexlify
 from models.secure_message import SecureMessage
 from engines.chipher_engine import CipherEngine
 from engines.x25519_engine import get_x25519_public_key_bytes
@@ -42,16 +42,17 @@ class DoubleRatchet:
         self.recv_msg_number = 0
 
         if self.debug_mode:
-            show_debug_logs(self)
+            show_debug_logs(self, shared_secret = shared_secret,  operation='update')
     
+    #  Поки що encrypt\decrypt
+    #  Відбувається на основі спільного секрету
+    #  оскільки не виходить синхронізувати ретчет після першого повідомлення
     def encrypt(self, plaintext: bytes) -> SecureMessage:
-        if self.send_chain is None: 
-            print('triky')
-            self._dh_ratchet(self.remote_dh_public, False)
-        
-        message_key = self._advance_send_chain()
-        engine = CipherEngine(key=message_key)
+        engine = CipherEngine(key=self.root_key)
         nonce, ciphertext = engine.encrypt(plaintext)
+
+        if self.debug_mode:
+            show_debug_logs(self, message_key=self.root_key, operation='encrypt')
 
         return SecureMessage(         
             dh_public=get_x25519_public_key_bytes(self.dh_public),         
@@ -59,35 +60,16 @@ class DoubleRatchet:
             ciphertext=ciphertext,
             msg_num=0
         )
-
-    def decrypt(self, secure_message: SecureMessage) -> bytes:
-        remote_dh_bytes = secure_message.dh_public
-        is_new_dh = (
-            self.remote_dh_public is None or
-            get_x25519_public_key_bytes(self.remote_dh_public) != remote_dh_bytes
-        )
-
-        # 🧠 Якщо recv_chain ще не ініціалізовано → перший decrypt
-        if self.recv_chain is None:
-            print('self.recv_chain')
-            self._dh_ratchet(self.remote_dh_public, is_initiator=True)
-
-        # 🧠 Якщо прийшов новий DH → виконуємо ратчет
-        elif is_new_dh:
-            print('self.is_new_dh')
-            new_remote_dh_public = X25519PublicKey.from_public_bytes(remote_dh_bytes)
-            self._dh_ratchet(new_remote_dh_public, is_initiator=False)
-
-        message_key = self._advance_recv_chain()
-        return self._decrypt_with(message_key, secure_message)
-
     
+    def decrypt(self, secure_message: SecureMessage) -> bytes:
+        return self._decrypt_with(self.root_key, secure_message)  
+
     def _decrypt_with(self, message_key: bytes, secure_message: SecureMessage) -> bytes:
         engine = CipherEngine(key=message_key)      
         plaintext = engine.decrypt(secure_message.nonce, secure_message.ciphertext)
 
         if self.debug_mode:
-            show_debug_logs(self, message_key, 'decrypt')
+            show_debug_logs(self, message_key=message_key, operation='decrypt')
 
         return plaintext
 
@@ -102,7 +84,10 @@ class DoubleRatchet:
         return message_key
     
 @staticmethod
-def show_debug_logs(self, message_key: bytes | None = None, operation: str | None = None):
+def show_debug_logs(self, 
+                    shared_secret: bytes | None = None,
+                    message_key: bytes | None = None, 
+                    operation: str | None = None):
         if self.debug_mode:
             show_ratchet_logs(self.root_key, 
                             self.dh_private, 
@@ -112,5 +97,6 @@ def show_debug_logs(self, message_key: bytes | None = None, operation: str | Non
                             self.recv_chain,
                             self.send_msg_number,
                             self.recv_msg_number,
+                            shared_secret,
                             message_key,
                             operation)

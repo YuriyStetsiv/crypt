@@ -41,6 +41,7 @@ def show_ratchet_logs(root_key: bytes,
                       recv_chain: bytes | None,
                       send_msg_number,
                       recv_msg_number, 
+                      shared_secret: bytes | None = None,
                       message_key: bytes | None = None,
                       operation: str | None = None):
     
@@ -72,6 +73,9 @@ def show_ratchet_logs(root_key: bytes,
     logging.info(f'[Ratchet] send_msg_number: {send_msg_number}')
     logging.info(f'[Ratchet] recv_msg_number: {recv_msg_number}')
 
+    if shared_secret is not None:
+        logging.info(f'[Ratchet] shared_secret: {hexlify(shared_secret)}')
+        
     if message_key is not None:
         logging.info(f'[Ratchet] key_message: {hexlify(message_key)}')
 
