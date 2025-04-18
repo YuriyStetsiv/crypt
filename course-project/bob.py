@@ -48,8 +48,6 @@ async def send(writer):
             
         # {ENCRYPT HERE}
         data = message_service.generate_message(message, private_identity_key)
-
-        # Send message
         writer.write(data)
 
         prompt()
@@ -58,12 +56,6 @@ async def send(writer):
 async def init_connection():
     reader, writer = await bob_client()
     print("Connected to Alice!")
-    prompt()
-
-    # імітація signal identity з привязкою до 
-    # Constants.ALICE\Constants.BOB
-    global private_identity_key, public_idenity_key
-    private_identity_key, public_idenity_key = IdentityService.init_keys(Constants.BOB, debug_mode)
 
     # Генеруємо DH\Handshake пари ключів
     bob_dh_private, bob_dh_public = generate_x25519_keys()
@@ -84,10 +76,9 @@ async def init_connection():
     dr = DoubleRatchet(initial_root, 
                        bob_dh_private, 
                        bob_dh_public, 
-                       restore_x25519_public_key(handshake_message.dh_public), 
+                       None, #restore_x25519_public_key(handshake_message.dh_public), 
                        debug_mode)
-    #dr._dh_ratchet(restore_x25519_public_key(handshake_message.dh_public), False)
-   
+ 
     global message_service
     message_service = MessageService(dr, Constants.BOB, debug_mode)
 
@@ -100,15 +91,18 @@ async def init_connection():
                                   handshake_message.dh_public,
                                   shared_secret,
                                   initial_root) 
-    
+        
+    prompt()
     await asyncio.gather(receive(reader), send(writer))
 
 async def init_connection_wrapper(debug=False):
     global debug_mode
     debug_mode = debug
 
-    if debug_mode:
-        print("Bob is running in debug mode")
+    # імітація signal identity з привязкою до 
+    # Constants.ALICE\Constants.BOB
+    global private_identity_key, public_idenity_key
+    private_identity_key, public_idenity_key = IdentityService.init_keys(Constants.BOB, debug_mode)
 
     await init_connection()
 

@@ -1,12 +1,15 @@
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PublicKey
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from services.identity_service import IdentityService
 from models.handshake_message import HandshakeMessage
 from engines.x25519_engine import get_x25519_public_key_bytes
 from utils.logger_utils import show_handshake_log
 
-async def send_handshake_message(writer,
+#
+# DEPRECATED - більше не використовується
+#
+async def _send_handshake_message(writer,
                          identity_id: str, 
                          handshake_pulic_key: X25519PublicKey,
                          dh_public_key: X25519PublicKey,
@@ -30,7 +33,7 @@ async def send_handshake_message(writer,
 
     await writer.drain()
 
-async def receive_handshake_message(reader, debug_mode: bool) -> HandshakeMessage:
+async def _receive_handshake_message(reader, debug_mode: bool) -> HandshakeMessage:
     line = await reader.readline()
     msg = HandshakeMessage.deserialize(line)
 
@@ -52,11 +55,11 @@ async def do_handshake(reader, writer,
                        private_identity_key: Ed25519PrivateKey,
                        debug_mode: bool) -> HandshakeMessage:
 
-    await send_handshake_message(writer,
+    await _send_handshake_message(writer,
                                  identity_id, 
                                  handshake_pulic_key,
                                  dh_public_key, 
                                  private_identity_key,
                                  debug_mode)
     
-    return await receive_handshake_message(reader, debug_mode)
+    return await _receive_handshake_message(reader, debug_mode)

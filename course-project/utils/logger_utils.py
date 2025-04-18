@@ -31,23 +31,28 @@ def show_init_connection_logs(identity_id,
     logging.info(f'[Client] shared_secret: {hexlify(shared_secret)}')
     logging.info(f'[Client] double_ratchet_initial_root: {hexlify(initial_root)}')
 
-    print('\n')
+    print('')
 
 def show_ratchet_logs(root_key: bytes,
                       dh_private: X25519PrivateKey,
                       dh_public: X25519PublicKey,
-                      remote_dh_public: X25519PublicKey,
+                      remote_dh_public: X25519PublicKey | None,
                       send_chain: bytes | None,
                       recv_chain: bytes | None,
                       send_msg_number,
                       recv_msg_number, 
+                      prev_msg_number,
                       shared_secret: bytes | None = None,
                       message_key: bytes | None = None,
                       operation: str | None = None):
     
     dh_private_bytes = get_x25519_private_key_bytes(dh_private)
     dh_public_bytes = get_x25519_public_key_bytes(dh_public)
-    remote_dh_public_bytes = get_x25519_public_key_bytes(remote_dh_public)
+
+    if remote_dh_public is None:
+        remote_dh_public_bytes = 'None'
+    else:
+        remote_dh_public_bytes = hexlify(get_x25519_public_key_bytes(remote_dh_public)).decode()
 
     if send_chain is None:
         send_chain_info = 'None'
@@ -67,11 +72,12 @@ def show_ratchet_logs(root_key: bytes,
     logging.info(f'[Ratchet] root_key: {hexlify(root_key)}')
     logging.info(f'[Ratchet] dh_private: {hexlify(dh_private_bytes)}')
     logging.info(f'[Ratchet] dh_public: {hexlify(dh_public_bytes)}')
-    logging.info(f'[Ratchet] remote_dh_public: {hexlify(remote_dh_public_bytes)}')
+    logging.info(f'[Ratchet] remote_dh_public: {remote_dh_public_bytes}')
     logging.info(f'[Ratchet] send_chain: {send_chain_info}')
     logging.info(f'[Ratchet] recv_chain: {recv_chain_info}')
     logging.info(f'[Ratchet] send_msg_number: {send_msg_number}')
     logging.info(f'[Ratchet] recv_msg_number: {recv_msg_number}')
+    logging.info(f'[Ratchet] prev_send_msg_number: {prev_msg_number}')
 
     if shared_secret is not None:
         logging.info(f'[Ratchet] shared_secret: {hexlify(shared_secret)}')
@@ -98,6 +104,7 @@ def show_message_logs(secure_message: SecureMessage, action: str):
     logging.info(f'[Message] nonce: {hexlify(secure_message.nonce)}')
     logging.info(f'[Message] ciphertext: {hexlify(secure_message.ciphertext)}')
     logging.info(f'[Message] msg_num: {secure_message.msg_num}')
+    logging.info(f'[Message] prev_msg_num: {secure_message.prev_msg_num}')
     logging.info(f'[Message] signature: {hexlify(secure_message.signature)}')
     logging.info(f'[Message] conversation_id: {hexlify(secure_message.conversation_id)}')
     logging.info(f'[Message] message_type: {secure_message.message_type}')
@@ -113,3 +120,8 @@ def show_handshake_log(hanshake_message: HandshakeMessage, action: str):
     logging.info(f'[Handshake] signature: {hexlify(hanshake_message.signature)}')
 
     print('')
+
+def show_skipped_key_log(recv_chain: bytes,
+                         send_msg_number,
+                         message_key: bytes):
+    logging.info(f'[Ratchet] generate skipped key \n    [{hexlify(recv_chain)}, {send_msg_number}]: {hexlify(message_key)}')

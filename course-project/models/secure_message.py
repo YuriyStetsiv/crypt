@@ -7,6 +7,7 @@ class SecureMessage:
     nonce: bytes = None                     # 12 байт (nonce для ChaCha20-Poly1305)
     ciphertext: bytes = None             # Зашифрований текст з вбудованим тегом (MAC)
     msg_num: int = 0
+    prev_msg_num: int = 0
 
     signature: bytes  = b''             # Цифровий підпис даних
     identity_id: str = ''
@@ -25,7 +26,8 @@ class SecureMessage:
             self.dh_public +
             self.nonce +
             self.ciphertext +
-            self.msg_num.to_bytes(4, "big")
+            self.msg_num.to_bytes(4, "big") +
+            self.prev_msg_num.to_bytes(4, "big")
         )
     
     def get_aad(self) -> bytes:
@@ -43,6 +45,7 @@ class SecureMessage:
             "ciphertext": base64.b64encode(self.ciphertext).decode(),
             "signature": base64.b64encode(self.signature).decode() if self.signature is not None else None,
             "msg_num": self.msg_num,
+            "prev_msg_num": self.prev_msg_num,
             "conversation_id": base64.b64encode(self.conversation_id).decode(),
             "message_type": self.message_type,
             "protocol_version": self.protocol_version  
@@ -59,6 +62,7 @@ class SecureMessage:
             ciphertext=base64.b64decode(obj["ciphertext"]),
             signature=base64.b64decode(obj["signature"]) if obj.get("signature") else None,
             msg_num=obj["msg_num"],
+            prev_msg_num=obj["prev_msg_num"],
             conversation_id=base64.b64decode(obj.get("conversation_id", "")) if obj.get("conversation_id") else b'',
             message_type=obj.get("message_type", "text"),
             protocol_version=obj.get("protocol_version", 1)  
